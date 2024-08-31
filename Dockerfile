@@ -22,4 +22,4 @@ EXPOSE 8080
 ENV PORT=8080
 ENV HOST=0.0.0.0
 
-CMD ["uv", "run", "main.py"]
+CMD ["python", "main.py"]
