@@ -163,7 +163,7 @@ async def init_page():
             a = await ui.run_javascript("new URL(window.location.href)")
             qr_code = generate_qr_code(str(a))
             ui.image(qr_code).classes("w-256 h-256 mb-4")
-            logger.info("Showed URL", a)
+            logger.info(f"Showed URL {str(a)}")
 
             ui.label(a)
 
