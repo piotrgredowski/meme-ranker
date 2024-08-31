@@ -16,10 +16,13 @@ COPY . /app
 
 ENV PATH="/app/.venv/bin:$PATH"
 # Make port 8080 available to the world outside this container
-EXPOSE 8080
+EXPOSE 8081
 
 # Define environment variable
-ENV PORT=8080
+ENV PORT=8081
 ENV HOST=0.0.0.0
 
-CMD ["/app/.venv/bin/python", "main.py"]
+RUN . .venv/bin/activate
+
+
+CMD ["uv", "run", "main.py"]

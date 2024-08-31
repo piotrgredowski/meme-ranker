@@ -2,7 +2,6 @@
 # requires-python = ">=3.12"
 # dependencies = [
 #     "nicegui",
-#     "sqlite3",
 #     "qrcode",
 # ]
 # ///
@@ -38,6 +37,7 @@ def init_db():
 
 
 init_db()
+RANKING_IS_CLOSED = False
 
 
 class MemeRanker:
@@ -65,7 +65,7 @@ class MemeRanker:
             raise FileNotFoundError("No image files found in the 'memes' directory.")
 
         logger.info(f"Loaded {len(memes)} memes from the directory")
-        return memes[:5]
+        return memes[:2]
 
     def rate_meme(self, score: int, user_id: str):
         logger.info(f"Rating meme {self.current_meme_index} with score {score}")
@@ -94,7 +94,7 @@ class MemeRanker:
         meme_image.set_source(meme["url"])
         meme_name.set_text(meme["name"])
         progress.set_value(self.current_meme_index / self.total_memes)
-        progress_label.set_text(f"{self.current_meme_index + 1} / {self.total_memes}")
+        # progress_label.set_text(f"{self.current_meme_index + 1} / {self.total_memes}")
         self.update_button_colors()
         logger.info(f"Updated to meme {self.current_meme_index}: {meme['name']}")
 
@@ -175,21 +175,19 @@ async def init_page():
 
 
 @ui.page("/rate/{user_id}")
-def rating_page(user_id: str):
+async def rating_page(user_id: str):
     logger.info(f"Rendering rating page for user {user_id}")
     with ui.column().classes("w-full h-screen p-4"):
         with ui.row().classes(
             "w-full md:w-1/3 p-4 flex flex-col justify-center items-center"
         ):
             ui.label("Rate the Meme").classes("text-h4 mb-4 text-center")
-            global meme_name, progress, progress_label
+            global meme_name, progress
             meme_name = ui.label(ranker.memes[0]["name"]).classes(
                 "text-xl mb-4 text-center"
             )
-            # progress = ui.linear_progress(value=0).classes("w-full mb-2")
-            # progress_label = ui.label(f"1 / {ranker.total_memes}").classes(
-            #     "mb-4 text-center"
-            # )
+            progress = ui.linear_progress(value=0, show_value=False).classes("w-full")
+            # progress_label = ui.label(f"1 / {ranker.total_memes}").classes()
             with ui.row().classes("gap-1 w-full"):
                 ranker.rating_buttons = [
                     ui.button(
@@ -212,25 +210,44 @@ def rating_page(user_id: str):
     ranker.update_button_colors()
 
 
+@ui.page("/finish")
+async def finish_page():
+    global RANKING_IS_CLOSED
+    RANKING_IS_CLOSED = True
+
+
 @ui.page("/results")
-def ranking_page():
+async def ranking_page():
     logger.info("Rendering results page")
-    with ui.column().classes("w-full h-screen p-4 flex flex-col items-center"):
-        ui.label("Meme Rankings").classes("text-h3 mb-4 text-center")
+    if not RANKING_IS_CLOSED:
+        with ui.column().classes("w-full h-screen p-4 flex flex-col items-center"):
+            ui.label("Waiting for ranking to close. Refresh when asked to...").classes(
+                "text-h3"
+            )
+            ui.spinner().classes("w-1/6 h-1/6")
+        return
+    ui.label("Meme Rankings").classes("text-h3 mb-4 text-center")
+    with ui.column().classes("w-full p-4 flex flex-col items-center"):
         sorted_memes = sorted(
             ranker.memes,
             key=lambda m: sum(m["scores"]) / len(m["scores"]) if m["scores"] else 0,
             reverse=True,
         )
-        with ui.row().classes("flex-grow overflow-auto w-full max-w-2xl"):
+        with ui.column().classes("w-full md:w-1/2"):
             for i, meme in enumerate(sorted_memes):
+                place = len(sorted_memes) - i - 1
                 avg_score = (
                     sum(meme["scores"]) / len(meme["scores"]) if meme["scores"] else 0
                 )
-                ui.label(
-                    f"{i+1}. {meme['name']} - Average Score: {avg_score:.2f}"
-                ).classes("text-lg mb-2 text-center w-full")
-        ui.button("Start Over", on_click=ranker.reset).classes("mt-4 w-full max-w-xs")
+
+                ui.label(f"{place+1} place, average Score: {avg_score:.2f}").classes(
+                    "text-lg mb-2 text-center w-full"
+                )
+
+                ui.image(meme["url"])
+            ui.button("Start Over", on_click=ranker.reset).classes(
+                "mt-4 w-full max-w-xs"
+            )
 
 
 ui.query(".nicegui-content").classes("w-full")
@@ -246,4 +263,4 @@ ui.aggrid({}).classes("flex-grow")
 logger.info("Starting the application")
 
 
-ui.run(port=int(os.getenv("PORT", 8080)), host=os.getenv("HOST", "0.0.0.0"))
+ui.run(port=int(os.getenv("PORT", 8082)), host=os.getenv("HOST", "0.0.0.0"))
