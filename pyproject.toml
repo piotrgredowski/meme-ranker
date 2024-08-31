@@ -1,0 +1,10 @@
+[project]
+name = "programming-memes"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "nicegui>=1.4.37",
+    "qrcode>=7.4.2",
+]
