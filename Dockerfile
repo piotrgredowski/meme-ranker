@@ -14,6 +14,7 @@ RUN uv sync --frozen
 
 COPY . /app
 
+ENV PATH="/app/.venv/bin:$PATH"
 # Make port 8080 available to the world outside this container
 EXPOSE 8080
 
@@ -21,5 +22,4 @@ EXPOSE 8080
 ENV PORT=8080
 ENV HOST=0.0.0.0
 
-# Run app.py when the container launches
 CMD ["uv", "run", "main.py"]
