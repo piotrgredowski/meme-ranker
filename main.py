@@ -65,7 +65,7 @@ class MemeRanker:
             raise FileNotFoundError("No image files found in the 'memes' directory.")
 
         logger.info(f"Loaded {len(memes)} memes from the directory")
-        return memes[:2]
+        return memes[:10]
 
     def rate_meme(self, score: int, user_id: str):
         logger.info(f"Rating meme {self.current_meme_index} with score {score}")
