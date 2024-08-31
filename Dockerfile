@@ -8,6 +8,7 @@ WORKDIR /app
 # Copy the current directory contents into the container at /app
 
 COPY uv.lock /app/uv.lock
+COPY pyproject.toml /app/pyproject.toml
 
 RUN uv sync --frozen
 
