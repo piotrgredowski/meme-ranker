@@ -22,4 +22,4 @@ EXPOSE 8080
 ENV PORT=8080
 ENV HOST=0.0.0.0
 
-CMD ["python3", "main.py"]
+CMD ["/app/.venv/bin/python", "main.py"]
