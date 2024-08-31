@@ -74,7 +74,7 @@ class MemeRanker:
         self.save_rating_to_db(
             self.memes[self.current_meme_index]["name"], score, user_id
         )
-        self.next_meme()
+        self.next_meme(user_id)
 
     def save_rating_to_db(self, meme_name: str, rating: int, user_id: str):
         conn = sqlite3.connect(DB_NAME)
@@ -89,10 +89,16 @@ class MemeRanker:
             f"Saved rating to database: User {user_id}, Meme {meme_name}, Rating {rating}"
         )
 
-    def update_meme(self):
+    def update_meme(self, user_id):
         meme = self.memes[self.current_meme_index]
+        meme_image = get_meme_image(user_id)
         meme_image.set_source(meme["url"])
+        set_meme_image(user_id, meme_image)
+        meme_name = get_meme_name(user_id)
         meme_name.set_text(meme["name"])
+        set_meme_name(user_id, meme_name)
+
+        progress = get_progress(user_id)
         progress.set_value(self.current_meme_index / self.total_memes)
         # progress_label.set_text(f"{self.current_meme_index + 1} / {self.total_memes}")
         self.update_button_colors()
@@ -102,25 +108,25 @@ class MemeRanker:
         logger.info("Showing results page")
         ui.open("/results")
 
-    def reset(self):
+    def reset(self, user_id):
         logger.info("Resetting MemeRanker")
         self.current_meme_index = 0
         self.user_rating.clear()
         for meme in self.memes:
             meme["scores"] = []
-        self.update_meme()
+        self.update_meme(user_id)
         ui.open("/")
 
-    def next_meme(self):
+    def next_meme(self, user_id):
         self.current_meme_index = (self.current_meme_index + 1) % self.total_memes
-        self.update_meme()
+        self.update_meme(user_id)
         if self.current_meme_index == 0:
             logger.info("Reached the end of memes, showing results")
             self.show_results()
 
-    def prev_meme(self):
+    def prev_meme(self, user_id):
         self.current_meme_index = (self.current_meme_index - 1) % self.total_memes
-        self.update_meme()
+        self.update_meme(user_id)
 
     def update_button_colors(self):
         user_rating = self.user_rating.get(self.current_meme_index)
@@ -146,9 +152,13 @@ def generate_qr_code(url: str) -> str:
 
 
 @ui.page("/")
+# @ui.page("/{user_id}")
+# async def init_page(user_id: str | None = None):
 async def init_page():
-    user_id = str(uuid.uuid4())
-    logger.info(f"New user connected: {user_id}")
+    # if not user_id:
+    #     user_id = str(uuid.uuid4())
+    #     ui.open(f"/rate/{user_id}")
+    # logger.info(f"New user connected: {user_id}")
 
     # url = await show_url()
 
@@ -169,24 +179,73 @@ async def init_page():
 
         ui.button("Show QR code", on_click=show_url)
         # ui.label(f"Scan the QR code or visit: {external_url}").classes("mb-4")
-        ui.button("Start Rating", on_click=lambda: ui.open(f"/rate/{user_id}")).classes(
-            "text-xl"
-        )
+        user_id = uuid.uuid4()
+        ui.button("Start Rating", on_click=lambda: ui.open("/rate")).classes("text-xl")
 
 
+store = {}
+
+
+def get_meme_image(user_id):
+    global store
+    data = store.get(user_id, {})
+    return data["meme_image"]
+
+
+def set_meme_image(user_id, meme_image):
+    global store
+
+    if user_id not in store:
+        store[user_id] = {}
+    store[user_id]["meme_image"] = meme_image
+
+
+def get_meme_name(user_id):
+    global store
+    data = store.get(user_id, {})
+    return data["meme_name"]
+
+
+def set_meme_name(user_id, meme_name):
+    global store
+    if user_id not in store:
+        store[user_id] = {}
+    store[user_id]["meme_name"] = meme_name
+
+
+def get_progress(user_id):
+    global store
+    data = store.get(user_id, {})
+    return data["progress"]
+
+
+def set_progress(user_id, progress):
+    global store
+
+    if user_id not in store:
+        store[user_id] = {}
+    store[user_id]["progress"] = progress
+
+
+@ui.page("/rate")
 @ui.page("/rate/{user_id}")
-async def rating_page(user_id: str):
+async def rating_page(user_id: str | None = None):
+    if not user_id:
+        user_id = str(uuid.uuid4())
+        ui.open(f"/rate/{user_id}")
+        return
     logger.info(f"Rendering rating page for user {user_id}")
     with ui.column().classes("w-full h-screen p-4"):
         with ui.row().classes(
             "w-full md:w-1/3 p-4 flex flex-col justify-center items-center"
         ):
             ui.label("Rate the Meme").classes("text-h4 mb-4 text-center")
-            global meme_name, progress
             meme_name = ui.label(ranker.memes[0]["name"]).classes(
                 "text-xl mb-4 text-center"
             )
+            set_meme_name(user_id, meme_name)
             progress = ui.linear_progress(value=0, show_value=False).classes("w-full")
+            set_progress(user_id, progress)
             # progress_label = ui.label(f"1 / {ranker.total_memes}").classes()
             with ui.row().classes("gap-1 w-full"):
                 ranker.rating_buttons = [
@@ -202,10 +261,10 @@ async def rating_page(user_id: str):
         with ui.row().classes(
             "w-full md:w-1/2 bg-gray-100 flex items-center justify-center mt-4 md:mt-0"
         ):
-            global meme_image
             meme_image = ui.image(ranker.memes[0]["url"]).classes(
                 "max-w-full max-h-full object-contain"
             )
+            set_meme_image(user_id, meme_image)
 
     ranker.update_button_colors()
 
