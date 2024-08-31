@@ -244,6 +244,7 @@ async def rating_page(user_id: str | None = None):
                 "text-xl mb-4 text-center"
             )
             set_meme_name(user_id, meme_name)
+
             progress = ui.linear_progress(value=0, show_value=False).classes("w-full")
             set_progress(user_id, progress)
             # progress_label = ui.label(f"1 / {ranker.total_memes}").classes()
