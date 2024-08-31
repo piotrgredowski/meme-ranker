@@ -8,6 +8,7 @@
 # ///
 import base64
 import logging
+import os
 import pathlib
 import sqlite3
 import uuid
@@ -245,4 +246,4 @@ ui.aggrid({}).classes("flex-grow")
 logger.info("Starting the application")
 
 
-ui.run()
+ui.run(port=int(os.getenv("PORT", 8080)), host=os.getenv("HOST", "0.0.0.0"))
